@@ -1,389 +1,3 @@
-// import React, {
-//   useContext,
-//   useEffect,
-//   useState,
-//   useCallback,
-//   useRef,
-// } from 'react';
-// import {
-//   View,
-//   Text,
-//   ActivityIndicator,
-//   Button,
-//   StyleSheet,
-//   SafeAreaView,
-//   StatusBar,
-//   Alert,
-//   BackHandler,
-//   Pressable,
-//   AppState,
-// } from 'react-native';
-// import BackArrow from '../customs/backArrow';
-// import { QuizContext } from '../bibleContext/QuizContext';
-// import {
-//   useIsFocused,
-//   useNavigation,
-//   useRoute,
-// } from '@react-navigation/native';
-// import { TouchableOpacity } from 'react-native';
-// import AsyncStorage from '@react-native-async-storage/async-storage';
-// import NetInfo from '@react-native-community/netinfo';
-// import { useFocusEffect } from '@react-navigation/native';
-// import { ScrollView } from 'react-native-gesture-handler';
-// import { Audio } from 'expo-av';
-// // import { Alert, AppState } from 'react-native';
-
-// const QuestionScreen = ({ navigation, route }) => {
-//   const [isLoading, setIsLoading] = useState(false);
-
-//   const {
-//     fetchQuestions,
-//     quizStarted,
-//     setQuizStarted,
-//     questions,
-//     currentQuestionIndex,
-//     setCurrentQuestionIndex,
-//     selectedOption,
-//     setSelectedOption,
-//     popupMessage,
-//     popupVisible,
-//     remainingTime,
-//     handleSubmit,
-//     // handleStartQuiz,
-//     currentCategory,
-//     isTimeUp,
-//     isSubmitted,
-//     stopTimer,
-//     startTrackingTime,
-//     stopAndSaveTime,
-//     setIsFetchingQuestions,
-//     isFetchingQuestions,
-//     user,
-//     stats,
-//     setRemainingTime,
-//     setIsTimeUp,
-//     setPopupMessage,
-//     setPopupVisible,
-//     setIsSubmitted,
-//     startTimer,
-//     //  saveCategoryProgress
-//   } = useContext(QuizContext);
-
-//   navigation = useNavigation();
-
-//   const { categoryName } = route.params || {};
-//   const [startTime, setStartTime] = useState(null); // Track the start time of the question
-
-//   // .....
-//   // Initialize startTime when a question is displayed
-//   useEffect(() => {
-//     const startTime = startTrackingTime();
-//     setStartTime(startTime);
-
-//     // Stop timer and save when the screen is exited
-//     return () => stopAndSaveTime(startTime);
-//   }, []);
-
-//   const isFocused = useIsFocused();
-
-//   useEffect(() => {
-//     if (isFocused) {
-//       startTimer();
-//     } else {
-//       stopTimer();
-//     }
-
-//     // Cleanup function to ensure the timer is stopped on unmount
-//     return () => stopTimer();
-//   }, [isFocused]);
-
-//   // Call handleSubmit when the user answers a question (pass whether they were correct or not)
-//   const onQuestionAnswered = (isCorrect) => {
-//     handleSubmit(isCorrect); // Update correct/failed answers and attempted questions
-
-//     // Stop the timer and save the time spent on this question
-//     stopAndSaveTime(startTime);
-//   };
-
-//   // Start Quiz function to handle quiz initiation
-//   const handleStartQuiz = async () => {
-//     try {
-//       setIsLoading(true); // Start loading
-//       // Fetch questions for the selected category
-//       await fetchQuestions(categoryName);
-
-//       // Reset the quiz state and start the quiz timer
-//       setQuizStarted(true); // This triggers the quiz UI to appear
-//       // setCurrentQuestionIndex(0); // Start from the first question
-//       setIsLoading(false); // End loading
-//     } catch (error) {
-//       console.log('Error starting quiz:', error);
-//       setIsLoading(false);
-//     }
-//   };
-
-//   if (isLoading) {
-//     // Show loading indicator while loading
-//     return (
-//       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-//         <ActivityIndicator size="large" color="blue" />
-//         <Text style={{ marginTop: 10, color: 'black', fontWeight: 'bold' }}>
-//           Loading Question...
-//         </Text>
-//         <Text>Please wait a seconds...</Text>
-//       </View>
-//     );
-//   }
-
-//   useFocusEffect(
-//     useCallback(() => {
-//       return () => {
-//         // Stop the timer when the screen loses focus
-//         stopTimer();
-//       };
-//     }, [])
-//   );
-
-//   const decodeHtmlEntities = (text) => {
-//     if (!text) {
-//       return ''; // Return an empty string if the input is undefined or null
-//     }
-
-//     return text
-//       .replace(/&quot;/g, '"') // Replace &quot; with "
-//       .replace(/&#039;/g, "'"); // Replace &#039; with '
-//     text.replace(/&amp;/g, '&'); // Replace &amp; with &
-//     text.replace(/&lt;/g, '<'); // Replace &lt; with <
-//     text.replace(/&gt;/g, '>'); // Replace &gt; with >
-//   };
-
-//   const currentQuestion = questions[currentQuestionIndex] || {};
-
-//   return (
-//     <SafeAreaView style={{ flex: 1, backgroundColor: '#0d2331' }}>
-//       <View
-//         style={{
-//           alignSelf: 'flex-start',
-//           marginHorizontal: 5,
-//           justifyContent: 'center',
-//           alignItems: 'center',
-//           flexDirection: 'row',
-//           marginTop: 30,
-//         }}
-//       >
-//         <BackArrow
-//           color="orange"
-//           onPress={() => {
-//             navigation.goBack(); // Navigate back
-//             stopTimer(); // Stop the timer
-//           }}
-//         />
-//         <Text style={styles.headerText}>QuizMaster</Text>
-//       </View>
-
-//       {!quizStarted ? (
-//         <View
-//           style={{
-//             justifyContent: 'center',
-//             alignItems: 'center',
-//             flex: 1,
-//             padding: 16,
-//           }}
-//         >
-//           <Text style={{ color: 'white', fontSize: 22, textAlign: 'center' }}>
-//             NOTE:
-//           </Text>
-//           <Text
-//             style={{
-//               color: 'white',
-//               fontSize: 18,
-//               textAlign: 'center',
-//               lineHeight: 28,
-//             }}
-//           >
-//             The quiz will start immediately after you press the{' '}
-//             <Text style={{ color: '#60a5fa', fontWeight: 'bold' }}>
-//               Start Quiz Now
-//             </Text>
-//             . You will have <Text style={{ color: '#9ee86f' }}>15 seconds</Text>{' '}
-//             to answer each question.
-//           </Text>
-//           <TouchableOpacity
-//             style={{
-//               marginTop: 20,
-//               backgroundColor: 'green',
-//               padding: 10,
-//               borderRadius: 5,
-//             }}
-//             onPress={handleStartQuiz}
-//           >
-//             <Text style={{ color: 'white', fontSize: 16 }}>Start Quiz Now</Text>
-//           </TouchableOpacity>
-//         </View>
-//       ) : (
-//         currentQuestion && (
-//           <ScrollView
-//             showsVerticalScrollIndicator={false}
-//             contentContainerStyle={{ paddingBottom: 50 }}
-//           >
-//             <View style={styles.statsContainer}>
-//               <View>
-//                 <Text style={styles.statsText}>
-//                   Earnings: ${stats.earnings.toFixed(2)}
-//                 </Text>
-//                 <Text style={styles.statsText}>
-//                   Rewards: ${stats.rewards.toFixed(2)}
-//                 </Text>
-//               </View>
-//               <View style={styles.timeContainer}>
-//                 <Text style={styles.timerText}>{remainingTime}s</Text>
-//               </View>
-//             </View>
-
-//             <View style={styles.questionContainer}>
-//               <View
-//                 style={{
-//                   justifyContent: 'center',
-//                   alignItems: 'center',
-//                   flexDirection: 'row',
-//                   gap: 18,
-//                 }}
-//               >
-//                 <Text style={styles.questionText}>
-//                   QUE: {currentQuestionIndex + 1}/{questions.length}
-//                 </Text>
-//                 <Text style={styles.questionText}>
-//                   CATEG:{' '}
-//                   <Text style={{ color: '#9ee86f', fontSize: 17 }}>
-//                     {currentQuestion.category}
-//                   </Text>
-//                 </Text>
-//               </View>
-//               {isFetchingQuestions && (
-//                 // Show loading indicator while loading
-//                 <View
-//                   style={{ justifyContent: 'center', alignItems: 'center' }}
-//                 >
-//                   <ActivityIndicator size="large" color="white" />
-//                   <Text
-//                     style={{
-//                       marginTop: 10,
-//                       color: 'white',
-//                       fontWeight: 'bold',
-//                     }}
-//                   >
-//                     Loading Question...
-//                   </Text>
-//                 </View>
-//               )}
-
-//               <Text style={styles.questionTitle}>
-//                 {decodeHtmlEntities(currentQuestion.questionText)}
-//               </Text>
-
-//               {currentQuestion.options?.map((option) => (
-//                 <TouchableOpacity
-//                   key={option} // Use option text as the key
-//                   style={[
-//                     styles.optionButton,
-//                     selectedOption === option && styles.selectedOption,
-//                     isSubmitted &&
-//                       selectedOption === option &&
-//                       selectedOption === currentQuestion.answer &&
-//                       styles.correctOption,
-//                     isSubmitted &&
-//                       selectedOption === option &&
-//                       selectedOption !== currentQuestion.answer &&
-//                       styles.wrongOption,
-//                   ]}
-//                   onPress={() => setSelectedOption(option)}
-//                   disabled={isSubmitted || isTimeUp}
-//                 >
-//                   <Text style={styles.optionText}>{option}</Text>
-//                 </TouchableOpacity>
-//               ))}
-
-//               {selectedOption && (
-//                 <View style={styles.submitButtonContainer}>
-//                   <TouchableOpacity
-//                     style={styles.submitButton}
-//                     onPress={handleSubmit}
-//                   >
-//                     <Text style={styles.submitText}>
-//                       {isTimeUp || isSubmitted ? 'Next Question' : 'Submit'}
-//                     </Text>
-//                   </TouchableOpacity>
-//                 </View>
-//               )}
-
-//               {/* pop up messages */}
-//               {popupVisible && (
-//                 <View style={styles.popupContainer}>
-//                   <Text
-//                     style={{ fontSize: 16, color: 'black', fontWeight: '900' }}
-//                   >
-//                     {popupMessage.includes('Correct! You earned $0.1') ? (
-//                       <Text style={{ fontSize: 20 }}>
-//                         Correct! You earned{' '}
-//                         <Text style={{ fontWeight: '900', color: 'green' }}>
-//                           $0.1
-//                         </Text>
-//                       </Text>
-//                     ) : popupMessage.includes('Wrong! You lost $0.01') ? (
-//                       <Text style={{ fontSize: 20 }}>
-//                         Wrong answer! You lose{' '}
-//                         <Text style={{ fontWeight: '900', color: 'red' }}>
-//                           $0.01
-//                         </Text>
-//                       </Text>
-//                     ) : popupMessage.includes(
-//                         'Bonus! 10 correct answers! You earned $0.5'
-//                       ) ? (
-//                       <Text style={{ fontSize: 18 }}>
-//                         Bonus! 10 correct answers You earned{' '}
-//                         <Text
-//                           style={{
-//                             fontWeight: '900',
-//                             color: 'green',
-//                             fontSize: 25,
-//                           }}
-//                         >
-//                           $0.5
-//                         </Text>
-//                       </Text>
-//                     ) : popupMessage.includes(
-//                         'Amazing! 20 correct answers! You earned $1'
-//                       ) ? (
-//                       <Text style={{ fontSize: 18 }}>
-//                         Amazing! 20 correct answers in a row! You earned{' '}
-//                         <Text
-//                           style={{
-//                             fontWeight: '900',
-//                             color: 'green',
-//                             fontSize: 22,
-//                           }}
-//                         >
-//                           $1
-//                         </Text>
-//                       </Text>
-//                     ) : popupMessage.includes('Time Up! No Earning.') ? (
-//                       <Text style={{ fontSize: 18 }}>Time Up! No Earning.</Text>
-//                     ) : null}
-//                   </Text>
-//                 </View>
-//               )}
-//             </View>
-//           </ScrollView>
-//         )
-//       )}
-
-//       <StatusBar backgroundColor="#0d2331" barStyle="light-content" />
-//     </SafeAreaView>
-//   );
-// };
-
-// export default QuestionScreen;
-
 import React, {
   useState,
   useEffect,
@@ -395,438 +9,750 @@ import {
   View,
   Text,
   ActivityIndicator,
-  Button,
   StyleSheet,
   SafeAreaView,
   StatusBar,
   ScrollView,
   TouchableOpacity,
+  AppState,
+  Animated,
 } from 'react-native';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
-import { QuizContext } from '../bibleContext/QuizContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AppState } from 'react-native';
+import { QuizContext } from '../Context/QuizContext';
+import { useInterstitialAd } from '../ads/useInterstitialAd';
+import { decodeHtmlEntities } from '../utils/decodeHtmlEntities';
+// import { formatPoints } from '../utils/formatPoints'; // only used by the disabled points version
+
+const RULES_SEEN_KEY = '@quiz_has_seen_rules';
+const TIMER_DURATION = 15;
+const AUTO_ADVANCE_DELAY = 2500;
 
 const QuestionScreen = ({ route }) => {
   const navigation = useNavigation();
   const isFocused = useIsFocused();
+
+  // ==================== CONTEXT ====================
   const {
-    fetchQuestions,
     quizStarted,
-    setQuizStarted,
     questions,
     currentQuestionIndex,
     setCurrentQuestionIndex,
     selectedOption,
     setSelectedOption,
+    currentCategory,
     popupMessage,
     setPopupMessage,
     popupVisible,
     setPopupVisible,
-    remainingTime,
-    setRemainingTime,
     isTimeUp,
     setIsTimeUp,
     isSubmitted,
     setIsSubmitted,
-    startTrackingTime,
-    stopAndSaveTime,
     isFetchingQuestions,
-    setIsFetchingQuestions,
     stats,
-    setStats,
-    handleSubmit,
+    revealedAnswer,
+    activeQuizSession,
+    startNewQuiz,
+    resumeQuiz,
+    updateQuizProgress,
+    endQuiz,
+    submitAnswer: submitAnswerToServer,
   } = useContext(QuizContext);
-  const { categoryName } = route.params || {};
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [startTime, setStartTime] = useState(null);
-  const intervalIdRef = useRef(null);
-  const timeoutIdRef = useRef(null);
 
-  const startTimer = useCallback(
-    (duration = 15) => {
-      console.log('Starting timer with duration:', duration);
-      if (intervalIdRef.current) {
-        console.log('Timer already running, skipping:', intervalIdRef.current);
+  const { showInterstitial } = useInterstitialAd();
+
+  // ==================== ROUTE PARAMS ====================
+  const { categoryName, isResume } = route.params || {};
+  
+  // ==================== LOCAL STATE ====================
+  const [isLoading, setIsLoading] = useState(false);
+  const [showStartScreen, setShowStartScreen] = useState(!isResume);
+  const [localError, setLocalError] = useState(null);
+  const [isExhausted, setIsExhausted] = useState(false);
+  
+  // ==================== REFS ====================
+  const timerRef = useRef(null);
+  const autoAdvanceRef = useRef(null);
+  const backgroundTimeRef = useRef(null);
+  const hasStartedRef = useRef(false);
+  const isMountedRef = useRef(true);
+  const moveToNextQuestionRef = useRef(() => {}); // ADD THIS REF
+  const handleTimeUpRef = useRef(() => {});
+
+  // Per-session counters - `stats` in context is the user's lifetime total,
+  // so Results needs its own tally of what happened in *this* quiz.
+  const sessionRef = useRef({ correct: 0, wrong: 0, timeout: 0, startTotalEarnings: 0 });
+  const latestTotalEarningsRef = useRef(stats.totalEarnings);
+  useEffect(() => {
+    latestTotalEarningsRef.current = stats.totalEarnings;
+  }, [stats.totalEarnings]);
+
+
+  // CRITICAL FIX: Use ref for timer value to avoid closure issues
+  const remainingTimeRef = useRef(TIMER_DURATION);
+  const [timerDisplay, setTimerDisplay] = useState(TIMER_DURATION);
+
+  // ==================== REWARD TOAST ====================
+  const toastAnim = useRef(new Animated.Value(0)).current;
+  const toastTimerRef = useRef(null);
+
+  useEffect(() => {
+    if (!popupVisible) {
+      toastAnim.setValue(0);
+      return undefined;
+    }
+
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+
+    Animated.timing(toastAnim, { toValue: 1, duration: 180, useNativeDriver: true }).start();
+
+    toastTimerRef.current = setTimeout(() => {
+      Animated.timing(toastAnim, { toValue: 0, duration: 220, useNativeDriver: true }).start(() => {
+        if (isMountedRef.current) setPopupVisible(false);
+      });
+    }, 1500);
+
+    return () => {
+      if (toastTimerRef.current) {
+        clearTimeout(toastTimerRef.current);
+        toastTimerRef.current = null;
+      }
+    };
+  }, [popupVisible, popupMessage, toastAnim, setPopupVisible]);
+
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  
+  // ==================== DERIVED STATE ====================
+  const currentQuestion = questions[currentQuestionIndex] || null;
+  const isQuizActive = quizStarted && questions.length > 0 && currentQuestion;
+  const canSubmit = selectedOption && !isSubmitted && !isTimeUp;
+  const showNextButton = isSubmitted || isTimeUp;
+
+
+  // ==================== MOUNT/UNMOUNT ====================
+  
+  useEffect(() => {
+    isMountedRef.current = true;
+    console.log('📱 QuestionScreen mounted, category:', categoryName);
+  
+    return () => {
+      console.log('📱 QuestionScreen unmounting');
+      isMountedRef.current = false;
+      clearAllTimers();
+    };
+  }, []);
+  
+
+  // ==================== TIMER FUNCTIONS ====================
+  const clearAllTimers = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    if (autoAdvanceRef.current) {
+      clearTimeout(autoAdvanceRef.current);
+      autoAdvanceRef.current = null;
+    }
+  }, []);
+  
+  // CRITICAL: This function replaces all setRemainingTime calls
+  const updateTimerValue = useCallback((value) => {
+    if (!isMountedRef.current) return;
+    console.log('⏱️ Updating timer display to:', value);
+    remainingTimeRef.current = value;
+    setTimerDisplay(value);
+  }, []);
+  
+  const startTimer = useCallback((duration = TIMER_DURATION) => {
+    console.log('⏱️ Starting timer with duration:', duration);
+    
+    clearAllTimers();
+    updateTimerValue(duration);
+    
+    timerRef.current = setInterval(() => {
+      if (!isMountedRef.current) {
+        clearInterval(timerRef.current);
         return;
       }
-      setRemainingTime(duration);
-      intervalIdRef.current = setInterval(() => {
-        setRemainingTime((prevTime) => {
-          console.log('Timer tick:', prevTime);
-          if (prevTime <= 0) {
-            console.log('Time up, clearing interval:', intervalIdRef.current);
-            clearInterval(intervalIdRef.current);
-            intervalIdRef.current = null;
-            handleTimeUp();
-            return 0;
-          }
-          return prevTime - 1;
-        });
-      }, 1000);
-    },
-    [handleTimeUp, setRemainingTime]
-  );
-
-  const stopTimer = useCallback(() => {
-    console.log('Stopping timer:', intervalIdRef.current);
-    if (intervalIdRef.current) {
-      clearInterval(intervalIdRef.current);
-      intervalIdRef.current = null;
+      
+      const currentValue = remainingTimeRef.current;
+      const newValue = currentValue - 1;
+      
+      console.log('Timer tick:', currentValue, '→', newValue);
+      
+      if (newValue <= 0) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+        updateTimerValue(0);
+      } else {
+        updateTimerValue(newValue);
+      }
+    }, 1000);
+  }, [clearAllTimers, updateTimerValue]);
+  
+  const pauseTimer = useCallback(() => {
+    console.log('⏸️ Pausing timer');
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
     }
   }, []);
 
-  const handleTimeUp = useCallback(() => {
-    setIsTimeUp(true);
-    setPopupMessage('Time Up! No Earning.');
-    setPopupVisible(true);
-    timeoutIdRef.current = setTimeout(() => {
-      setPopupVisible(false);
-      moveToNextQuestion();
-    }, 3000);
-  }, [moveToNextQuestion, setIsTimeUp, setPopupMessage, setPopupVisible]);
 
-  const moveToNextQuestion = useCallback(async () => {
+  const handleTimeUp = useCallback(async () => {
+    if (!isMountedRef.current) return;
+  
+    console.log('⏰ Handling time up');
+    pauseTimer();
+    setIsTimeUp(true);
+  
     try {
-      if (!categoryName || typeof categoryName !== 'string') {
-        throw new Error('Invalid categoryName');
+      await submitAnswerToServer(true);
+      sessionRef.current.timeout += 1;
+    } catch (error) {
+      console.error('❌ Error on timeout:', error);
+    }
+
+    autoAdvanceRef.current = setTimeout(() => {
+      if (isMountedRef.current) {
+        moveToNextQuestionRef.current();
       }
-      await AsyncStorage.setItem(
-        `quizState_${categoryName}`,
-        JSON.stringify({
-          categoryName,
-          questionIndex: currentQuestionIndex + 1,
-          timeLeft: 15,
-        })
-      );
+    }, AUTO_ADVANCE_DELAY);
+  }, [submitAnswerToServer, pauseTimer, setIsTimeUp]);
+
+  
+  useEffect(() => {
+    handleTimeUpRef.current = handleTimeUp;
+  }, [handleTimeUp]);
+  
+  
+
+  
+  // ==================== TIME UP EFFECT ====================
+
+  useEffect(() => {
+    if (
+      timerDisplay === 0 &&
+      isQuizActive &&
+      !isTimeUp &&
+      !isSubmitted &&
+      hasStartedRef.current
+    ) {
+      console.log('⏰ Time up detected!');
+      handleTimeUpRef.current();
+    }
+  }, [timerDisplay, isQuizActive, isTimeUp, isSubmitted]);
+  
+  
+  // ==================== MOVE TO NEXT QUESTION ====================
+  const moveToNextQuestion = useCallback(async () => {
+    if (!isMountedRef.current) return;
+    
+    console.log('➡️ Moving to next question');
+    
+    try {
+      clearAllTimers();
+      setPopupVisible(false);
       setSelectedOption(null);
-      setRemainingTime(15);
       setIsTimeUp(false);
       setIsSubmitted(false);
-
-      if (currentQuestionIndex < questions.length - 1) {
-        setCurrentQuestionIndex(currentQuestionIndex + 1);
-        startTimer(15);
+  
+      const nextIndex = currentQuestionIndex + 1;
+  
+      if (nextIndex < questions.length) {
+        console.log('Moving to question', nextIndex + 1);
+        setCurrentQuestionIndex(nextIndex);
+        updateTimerValue(TIMER_DURATION);
+        await updateQuizProgress(nextIndex, TIMER_DURATION);
+        
+        // Start timer after a short delay
+        setTimeout(() => {
+          if (isMountedRef.current) {
+            startTimer(TIMER_DURATION);
+          }
+        }, 150);
       } else {
-        navigation.navigate('ResultsScreen', { stats });
+        console.log('🏁 Quiz finished!');
+        const session = sessionRef.current;
+        const moneyEarned = stats.totalEarnings - session.startTotalEarnings;
+        await endQuiz();
+        await showInterstitial();
+        navigation.replace('Results', {
+          category: currentCategory,
+          totalQuestions: questions.length,
+          correct: session.correct,
+          wrong: session.wrong,
+          timeout: session.timeout,
+          moneyEarned,
+          lifetimeStats: stats,
+        });
       }
     } catch (error) {
-      console.error('Error moving to next question:', error);
-      setError('Failed to move to next question');
+      console.error('❌ Error moving to next question:', error);
+      setLocalError('Failed to move to next question: ' + error.message);
     }
   }, [
-    categoryName,
     currentQuestionIndex,
-    questions,
+    questions.length,
     navigation,
-    startTimer,
     stats,
+    currentCategory,
+    clearAllTimers,
+    startTimer,
+    updateQuizProgress,
+    endQuiz,
+    showInterstitial,
+    setPopupVisible,
+    setSelectedOption,
+    setIsTimeUp,
+    setIsSubmitted,
+    setCurrentQuestionIndex,
+    updateTimerValue,
+  ]);
+  
+  // Update the ref whenever moveToNextQuestion changes
+  useEffect(() => {
+    moveToNextQuestionRef.current = moveToNextQuestion;
+  }, [moveToNextQuestion]);
+  
+  
+  // ==================== PULSE ANIMATION ====================
+  
+  useEffect(() => {
+    if (timerDisplay <= 5 && timerDisplay > 0 && !isSubmitted && !isTimeUp) {
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.2, duration: 200, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [timerDisplay, isSubmitted, isTimeUp, pulseAnim]);
+  
+  // ==================== SUBMIT ANSWER ====================
+  
+  const submitCurrentAnswer = useCallback(async () => {
+    if (!selectedOption || isSubmitted || isTimeUp) return;
+
+    console.log('📝 Submitting answer:', selectedOption);
+
+    pauseTimer();
+
+    try {
+      const result = await submitAnswerToServer(false);
+      if (result.isCorrect) {
+        sessionRef.current.correct += 1;
+      } else {
+        sessionRef.current.wrong += 1;
+      }
+    } catch (error) {
+      console.error('❌ Submit error:', error);
+    }
+
+    autoAdvanceRef.current = setTimeout(() => {
+      if (isMountedRef.current) {
+        moveToNextQuestion();
+      }
+    }, AUTO_ADVANCE_DELAY);
+  }, [
+    selectedOption,
+    isSubmitted,
+    isTimeUp,
+    submitAnswerToServer,
+    pauseTimer,
+    moveToNextQuestion,
   ]);
 
-  const onQuestionAnswered = useCallback(
-    (isCorrect) => {
-      try {
-        handleSubmit(isCorrect);
-        stopAndSaveTime(startTime);
-        stopTimer();
-        timeoutIdRef.current = setTimeout(() => {
-          setPopupVisible(false);
-          setIsSubmitted(false);
-          moveToNextQuestion();
-        }, 3000);
-      } catch (error) {
-        console.error('Error handling answer:', error);
-        setError('Failed to submit answer');
-      }
-    },
-    [
-      handleSubmit,
-      stopAndSaveTime,
-      startTime,
-      stopTimer,
-      moveToNextQuestion,
-      setPopupVisible,
-      setIsSubmitted,
-    ]
-  );
+  const handleButtonPress = useCallback(() => {
+    if (showNextButton) {
+      clearAllTimers();
+      moveToNextQuestion();
+    } else if (canSubmit) {
+      submitCurrentAnswer();
+    }
+  }, [showNextButton, canSubmit, clearAllTimers, moveToNextQuestion, submitCurrentAnswer]);
+
+  // ==================== START QUIZ ====================
 
   const handleStartQuiz = useCallback(async () => {
-    if (!categoryName || typeof categoryName !== 'string') {
-      setError('Invalid category selected');
-      return;
+    console.log('🎮 Starting quiz for category:', categoryName);
+    setShowStartScreen(false);
+    setIsLoading(true);
+    setLocalError(null);
+    setIsExhausted(false);
+
+    if (!isResume) {
+      AsyncStorage.setItem(RULES_SEEN_KEY, 'true').catch(() => {});
     }
+
+    sessionRef.current = {
+      correct: 0,
+      wrong: 0,
+      timeout: 0,
+      startTotalEarnings: latestTotalEarningsRef.current,
+    };
+
     try {
-      setIsLoading(true);
-      setIsFetchingQuestions(true);
-      await fetchQuestions(categoryName);
-      setQuizStarted(true);
-      setCurrentQuestionIndex(0);
-      const savedState = await AsyncStorage.getItem(
-        `quizState_${categoryName}`
-      );
-      if (savedState) {
-        const { questionIndex, timeLeft } = JSON.parse(savedState);
-        setCurrentQuestionIndex(questionIndex || 0);
-        setRemainingTime(timeLeft || 15);
-        startTimer(timeLeft || 15);
+      let initialTime = TIMER_DURATION;
+
+      if (isResume && activeQuizSession) {
+        console.log('Resuming quiz...');
+        const result = await resumeQuiz();
+        initialTime = result?.timeLeft || TIMER_DURATION;
       } else {
-        setRemainingTime(15);
-        startTimer(15);
+        console.log('Starting new quiz...');
+        await startNewQuiz(categoryName);
       }
-    } catch (error) {
-      console.error('Error starting quiz:', error);
-      setError(error.message);
+
+      console.log('Quiz started, initial time:', initialTime);
+      updateTimerValue(initialTime);
+      hasStartedRef.current = true;
+
+      setTimeout(() => {
+        if (isMountedRef.current) {
+          console.log('Starting timer after delay');
+          startTimer(initialTime);
+        }
+      }, 300);
+
+    } catch (err) {
+      console.error('❌ Start quiz error:', err);
+      setLocalError(err.message || 'Failed to start quiz');
+      setIsExhausted(!!err.isExhausted);
     } finally {
       setIsLoading(false);
-      setIsFetchingQuestions(false);
     }
   }, [
+    isResume,
+    activeQuizSession,
     categoryName,
-    fetchQuestions,
-    setQuizStarted,
-    setCurrentQuestionIndex,
-    setIsFetchingQuestions,
+    resumeQuiz,
+    startNewQuiz,
     startTimer,
+    updateTimerValue
   ]);
 
-  useEffect(() => {
-    const handleAppStateChange = (nextAppState) => {
-      console.log('AppState changed to:', nextAppState);
-      if (nextAppState === 'background' || nextAppState === 'inactive') {
-        if (categoryName && quizStarted) {
-          AsyncStorage.setItem(
-            `quizState_${categoryName}`,
-            JSON.stringify({
-              categoryName,
-              questionIndex: currentQuestionIndex,
-              timeLeft: remainingTime,
-            })
-          ).catch((error) => console.error('Error saving quiz state:', error));
-          stopTimer();
-          stopAndSaveTime(startTime);
-        }
-      } else if (nextAppState === 'active' && quizStarted) {
-        setPopupMessage('Quiz resumed!');
-        setPopupVisible(true);
-        setTimeout(() => setPopupVisible(false), 1000);
-        if (remainingTime > 0) {
-          startTimer(remainingTime);
-        }
-      }
-    };
+  // ==================== AUTO START (resume, or rules already seen) ====
 
-    const subscription = AppState.addEventListener(
-      'change',
-      handleAppStateChange
-    );
-
-    return () => {
-      stopTimer();
-      if (timeoutIdRef.current) {
-        clearTimeout(timeoutIdRef.current);
-      }
-      subscription.remove();
-    };
-  }, [
-    categoryName,
-    quizStarted,
-    currentQuestionIndex,
-    remainingTime,
-    stopTimer,
-    startTimer,
-    stopAndSaveTime,
-    startTime,
-  ]);
+  const autoStartAttemptedRef = useRef(false);
 
   useEffect(() => {
-    if (isFocused && quizStarted && remainingTime > 0) {
-      startTimer(remainingTime);
+    if (autoStartAttemptedRef.current) return undefined;
+
+    if (isResume && activeQuizSession) {
+      autoStartAttemptedRef.current = true;
+      console.log('Auto-resuming quiz...');
+      const timer = setTimeout(() => {
+        handleStartQuiz();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+
+    if (!isResume) {
+      autoStartAttemptedRef.current = true;
+      (async () => {
+        try {
+          const seen = await AsyncStorage.getItem(RULES_SEEN_KEY);
+          if (seen === 'true' && isMountedRef.current) {
+            console.log('Rules already seen, skipping rules screen...');
+            handleStartQuiz();
+          }
+        } catch (e) {
+          // Ignore - the rules screen simply shows as a safe fallback.
+        }
+      })();
+    }
+
+    return undefined;
+  }, [isResume, activeQuizSession, handleStartQuiz]);
+
+  // ==================== FOCUS HANDLING ====================
+
+  useEffect(() => {
+    if (!hasStartedRef.current) return;
+
+    if (isFocused && !isSubmitted && !isTimeUp && remainingTimeRef.current > 0 && !timerRef.current) {
+      console.log('Screen focused, resuming timer');
+      startTimer(remainingTimeRef.current);
     } else if (!isFocused) {
-      stopTimer();
+      console.log('Screen blurred, pausing timer');
+      pauseTimer();
+      if (currentCategory) {
+        updateQuizProgress(currentQuestionIndex, remainingTimeRef.current);
+      }
     }
-    return () => stopTimer();
-  }, [isFocused, quizStarted, remainingTime, startTimer, stopTimer]);
+  }, [isFocused, isSubmitted, isTimeUp, currentCategory, currentQuestionIndex, startTimer, pauseTimer, updateQuizProgress]);
+
+  // ==================== APP STATE ====================
 
   useEffect(() => {
-    console.log('QuestionScreen mounted with category:', categoryName);
-    if (categoryName && !quizStarted) {
-      handleStartQuiz();
-    }
-    return () => {
-      console.log('QuestionScreen unmounting');
-      stopTimer();
-      if (timeoutIdRef.current) {
-        clearTimeout(timeoutIdRef.current);
+    const handleAppState = (nextState) => {
+      if (!hasStartedRef.current || !isMountedRef.current) return;
+
+      console.log('AppState changed to:', nextState);
+
+      if (nextState === 'background' || nextState === 'inactive') {
+        backgroundTimeRef.current = Date.now();
+        pauseTimer();
+        if (currentCategory) {
+          updateQuizProgress(currentQuestionIndex, remainingTimeRef.current);
+        }
+      } else if (nextState === 'active' && backgroundTimeRef.current && !isSubmitted && !isTimeUp) {
+        const elapsed = Math.floor((Date.now() - backgroundTimeRef.current) / 1000);
+        const adjusted = Math.max(0, remainingTimeRef.current - elapsed);
+        backgroundTimeRef.current = null;
+        
+        console.log('Resuming after background, adjusted time:', adjusted);
+        
+        if (adjusted <= 0) {
+          updateTimerValue(0);
+        } else {
+          startTimer(adjusted);
+        }
       }
     };
-  }, [categoryName, quizStarted, handleStartQuiz, stopTimer]);
 
-  useEffect(() => {
-    if (quizStarted) {
-      const startTime = startTrackingTime();
-      setStartTime(startTime);
-      return () => stopAndSaveTime(startTime);
+    const subscription = AppState.addEventListener('change', handleAppState);
+    return () => subscription.remove();
+  }, [isSubmitted, isTimeUp, currentCategory, currentQuestionIndex, startTimer, pauseTimer, updateTimerValue, updateQuizProgress]);
+
+  // ==================== GO BACK ====================
+
+  const handleGoBack = useCallback(() => {
+    clearAllTimers();
+    if (hasStartedRef.current && currentCategory) {
+      updateQuizProgress(currentQuestionIndex, remainingTimeRef.current);
     }
-  }, [quizStarted, startTrackingTime, stopAndSaveTime]);
+    navigation.goBack();
+  }, [clearAllTimers, currentCategory, currentQuestionIndex, navigation, updateQuizProgress]);
 
-  const decodeHtmlEntities = (text) => {
-    if (!text) return '';
-    return text
-      .replace(/&quot;/g, '"')
-      .replace(/&#039;/g, "'")
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>');
-  };
 
-  const currentQuestion = questions[currentQuestionIndex] || {};
+  // ==================== RENDER ====================
+
+  if (isLoading || isFetchingQuestions) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color="#60a5fa" />
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
+        <StatusBar backgroundColor="#0d2331" barStyle="light-content" />
+      </SafeAreaView>
+    );
+  }
+
+  if (isExhausted) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.center}>
+          <Text style={styles.errorIcon}>🎉</Text>
+          <Text style={styles.errorText}>{localError}</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={handleGoBack}>
+            <Text style={styles.retryText}>Choose Another Category</Text>
+          </TouchableOpacity>
+        </View>
+        <StatusBar backgroundColor="#0d2331" barStyle="light-content" />
+      </SafeAreaView>
+    );
+  }
+
+  if (localError) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.center}>
+          <Text style={styles.errorIcon}>⚠️</Text>
+          <Text style={styles.errorText}>{localError}</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={() => { setLocalError(null); setShowStartScreen(true); }}>
+            <Text style={styles.retryText}>Try Again</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.retryBtn, styles.backBtn]} onPress={handleGoBack}>
+            <Text style={styles.retryText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+        <StatusBar backgroundColor="#0d2331" barStyle="light-content" />
+      </SafeAreaView>
+    );
+  }
+
+  if (showStartScreen) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={handleGoBack}>
+            <Text style={styles.backArrow}>←</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerText}>QuizMaster</Text>
+        </View>
+
+        <View style={styles.center}>
+          <Text style={styles.categoryTitle}>{categoryName}</Text>
+          
+          <View style={styles.rulesBox}>
+            <Text style={styles.rulesTitle}>📋 Quiz Rules</Text>
+            <Text style={styles.ruleText}>⏱️ 15 seconds per question</Text>
+            {/* POINTS VERSION (disabled):
+            <Text style={styles.ruleText}>✅ Correct: <Text style={styles.green}>+5 pts</Text></Text>
+            <Text style={styles.ruleText}>❌ Wrong: <Text style={styles.red}>-1 pt</Text></Text>
+            <Text style={styles.ruleText}>🎉 10 streak: <Text style={styles.green}>+30 pts</Text></Text>
+            <Text style={styles.ruleText}>🏆 20 streak: <Text style={styles.green}>+50 pts</Text></Text>
+            */}
+            <Text style={styles.ruleText}>✅ Correct: <Text style={styles.green}>+$0.02</Text></Text>
+            <Text style={styles.ruleText}>❌ Wrong: <Text style={styles.red}>-$0.01</Text></Text>
+            <Text style={styles.ruleText}>🎉 10 streak: <Text style={styles.green}>+$0.03</Text></Text>
+            <Text style={styles.ruleText}>🏆 20 streak: <Text style={styles.green}>+$0.04</Text></Text>
+          </View>
+
+          <TouchableOpacity style={styles.startBtn} onPress={handleStartQuiz}>
+            <Text style={styles.startBtnText}>🚀 Start Quiz</Text>
+          </TouchableOpacity>
+        </View>
+        <StatusBar backgroundColor="#0d2331" barStyle="light-content" />
+      </SafeAreaView>
+    );
+  }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => {
-            navigation.goBack();
-            stopTimer();
-          }}
-        >
+        <TouchableOpacity onPress={handleGoBack}>
           <Text style={styles.backArrow}>←</Text>
         </TouchableOpacity>
         <Text style={styles.headerText}>QuizMaster</Text>
       </View>
 
-      {isLoading || isFetchingQuestions ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="white" />
-          <Text style={styles.loadingText}>Loading Question...</Text>
-        </View>
-      ) : error ? (
-        <Text style={styles.errorText}>Error: {error}</Text>
-      ) : !quizStarted ? (
-        <View style={styles.startContainer}>
-          <Text style={styles.noteText}>NOTE:</Text>
-          <Text style={styles.instructionText}>
-            The quiz will start immediately after you press the{' '}
-            <Text style={styles.highlightText}>Start Quiz Now</Text>. You will
-            have <Text style={styles.timeText}>15 seconds</Text> to answer each
-            question.
-          </Text>
-          <TouchableOpacity
-            style={styles.startButton}
-            onPress={handleStartQuiz}
-          >
-            <Text style={styles.startButtonText}>Start Quiz Now</Text>
-          </TouchableOpacity>
-        </View>
-      ) : questions.length > 0 ? (
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.statsContainer}>
+      {isQuizActive ? (
+        <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+          {/* Stats */}
+          <View style={styles.statsRow}>
+            {/* POINTS VERSION (disabled):
             <View>
-              <Text style={styles.statsText}>
-                Earnings: ${stats.earnings.toFixed(2)}
-              </Text>
-              <Text style={styles.statsText}>
-                Rewards: ${stats.rewards.toFixed(2)}
-              </Text>
+              <Text style={styles.statsLabel}>Points</Text>
+              <Text style={styles.statsValue}>{formatPoints(stats.earnings)}</Text>
+              {stats.rewards > 0 && <Text style={styles.bonus}>+{formatPoints(stats.rewards)}</Text>}
             </View>
-            <View style={styles.timeContainer}>
-              <Text style={styles.timerText}>{remainingTime}s</Text>
+            */}
+            <View>
+              <Text style={styles.statsLabel}>Earnings</Text>
+              <Text style={styles.statsValue}>${stats.earnings.toFixed(2)}</Text>
+              {stats.rewards > 0 && <Text style={styles.bonus}>+${stats.rewards.toFixed(2)}</Text>}
             </View>
+            
+            <Animated.View style={[
+              styles.timerCircle,
+              timerDisplay <= 5 && styles.timerWarning,
+              { transform: [{ scale: pulseAnim }] }
+            ]}>
+              <Text style={[styles.timerNum, timerDisplay <= 5 && styles.timerNumWarn]}>{timerDisplay || 0}</Text>
+              <Text style={styles.timerSec}>sec</Text>
+            </Animated.View>
           </View>
 
-          <View style={styles.questionContainer}>
-            <View style={styles.questionHeader}>
-              <Text style={styles.questionText}>
-                QUE: {currentQuestionIndex + 1}/{questions.length}
-              </Text>
-              <Text style={styles.questionText}>
-                CATEG: <Text style={styles.categoryText}>{categoryName}</Text>
-              </Text>
+          {/* Progress */}
+          <View style={styles.progressBar}>
+            <View style={[styles.progressFill, { width: `${((currentQuestionIndex + 1) / questions.length) * 100}%` }]} />
+          </View>
+          <Text style={styles.progressText}>Question {currentQuestionIndex + 1} of {questions.length}</Text>
+
+          {stats.consecutiveCorrect > 0 && (
+            <View style={styles.streakBadge}>
+              <Text style={styles.streakText}>🔥 {stats.consecutiveCorrect} streak</Text>
             </View>
+          )}
 
-            <Text style={styles.questionTitle}>
-              {decodeHtmlEntities(currentQuestion.questionText)}
-            </Text>
+          {/* Question */}
+          <View style={styles.questionBox}>
+            <Text style={styles.questionText}>{decodeHtmlEntities(currentQuestion?.questionText)}</Text>
+          </View>
 
-            {currentQuestion.options?.map((option) => (
+          {/* Options */}
+          {currentQuestion?.options?.map((opt, idx) => {
+            const isSelected = selectedOption === opt;
+            const isCorrect = opt === revealedAnswer;
+            const showGreen = (isSubmitted || isTimeUp) && isCorrect;
+            const showRed = (isSubmitted || isTimeUp) && isSelected && !isCorrect;
+
+            return (
               <TouchableOpacity
-                key={option}
+                key={`${currentQuestionIndex}-${idx}`}
                 style={[
-                  styles.optionButton,
-                  selectedOption === option && styles.selectedOption,
-                  isSubmitted &&
-                    selectedOption === option &&
-                    selectedOption === currentQuestion.answer &&
-                    styles.correctOption,
-                  isSubmitted &&
-                    selectedOption === option &&
-                    selectedOption !== currentQuestion.answer &&
-                    styles.wrongOption,
+                  styles.optionBtn,
+                  isSelected && !isSubmitted && !isTimeUp && styles.optionSelected,
+                  showGreen && styles.optionCorrect,
+                  showRed && styles.optionWrong,
                 ]}
-                onPress={() => setSelectedOption(option)}
+                onPress={() => !isSubmitted && !isTimeUp && setSelectedOption(opt)}
                 disabled={isSubmitted || isTimeUp}
               >
-                <Text style={styles.optionText}>
-                  {decodeHtmlEntities(option)}
-                </Text>
+                <Text style={styles.optionLetter}>{String.fromCharCode(65 + idx)}</Text>
+                <Text style={styles.optionText}>{decodeHtmlEntities(opt)}</Text>
+                {showGreen && <Text style={styles.resultIcon}>✓</Text>}
+                {showRed && <Text style={styles.resultIcon}>✗</Text>}
               </TouchableOpacity>
-            ))}
+            );
+          })}
 
-            {selectedOption && (
-              <View style={styles.submitButtonContainer}>
-                <TouchableOpacity
-                  style={styles.submitButton}
-                  onPress={() =>
-                    onQuestionAnswered(
-                      selectedOption === currentQuestion.answer
-                    )
-                  }
-                >
-                  <Text style={styles.submitText}>
-                    {isTimeUp || isSubmitted ? 'Next Question' : 'Submit'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            )}
-
-            {popupVisible && (
-              <View style={styles.popupContainer}>
-                <Text style={styles.popupText}>
-                  {popupMessage.includes('Correct! You earned $0.1') ? (
-                    <Text>
-                      Correct! You earned{' '}
-                      <Text style={styles.popupHighlightGreen}>$0.1</Text>
-                    </Text>
-                  ) : popupMessage.includes('Wrong! You lost $0.01') ? (
-                    <Text>
-                      Wrong answer! You lose{' '}
-                      <Text style={styles.popupHighlightRed}>$0.01</Text>
-                    </Text>
-                  ) : popupMessage.includes(
-                      'Bonus! 10 correct answers! You earned $0.5'
-                    ) ? (
-                    <Text>
-                      Bonus! 10 correct answers You earned{' '}
-                      <Text style={styles.popupHighlightGreen}>$0.5</Text>
-                    </Text>
-                  ) : popupMessage.includes(
-                      'Amazing! 20 correct answers! You earned $1'
-                    ) ? (
-                    <Text>
-                      Amazing! 20 correct answers in a row! You earned{' '}
-                      <Text style={styles.popupHighlightGreen}>$1</Text>
-                    </Text>
-                  ) : popupMessage.includes('Time Up! No Earning.') ? (
-                    <Text>Time Up! No Earning.</Text>
-                  ) : null}
-                </Text>
-              </View>
-            )}
-          </View>
+          {/* Button */}
+          {(selectedOption || showNextButton) && (
+            <TouchableOpacity
+              style={[styles.actionBtn, showNextButton && styles.nextBtn]}
+              onPress={handleButtonPress}
+            >
+              <Text style={styles.actionBtnText}>
+                {showNextButton 
+                  ? (currentQuestionIndex < questions.length - 1 ? 'Next →' : 'Results →')
+                  : 'Submit'
+                }
+              </Text>
+            </TouchableOpacity>
+          )}
         </ScrollView>
       ) : (
-        <Text style={styles.noQuestionsText}>No questions available</Text>
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color="#60a5fa" />
+        </View>
+      )}
+
+      {popupVisible && (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.toastWrapper,
+            {
+              opacity: toastAnim,
+              transform: [
+                {
+                  translateY: toastAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [-16, 0],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.toast,
+              popupMessage.includes('Wrong')
+                ? styles.toastRed
+                : popupMessage.includes('Time Up')
+                ? styles.toastOrange
+                : styles.toastGreen,
+            ]}
+          >
+            <Text
+              style={[
+                styles.toastText,
+                popupMessage.includes('Wrong')
+                  ? styles.toastTextRed
+                  : popupMessage.includes('Time Up')
+                  ? styles.toastTextOrange
+                  : styles.toastTextGreen,
+              ]}
+            >
+              {popupMessage}
+            </Text>
+          </View>
+        </Animated.View>
       )}
 
       <StatusBar backgroundColor="#0d2331" barStyle="light-content" />
@@ -835,358 +761,90 @@ const QuestionScreen = ({ route }) => {
 };
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#0d2331' },
-  header: {
-    flexDirection: 'row',
+  container: { flex: 1, backgroundColor: '#0d2331' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 15, paddingTop: 45, paddingBottom: 15 },
+  backArrow: { fontSize: 28, color: '#f59e0b', marginRight: 15 },
+  headerText: { color: 'white', fontSize: 22, fontWeight: 'bold' },
+  
+  loadingText: { color: 'white', marginTop: 15, fontSize: 16 },
+  errorIcon: { fontSize: 50, marginBottom: 15 },
+  errorText: { color: '#ff6b6b', fontSize: 16, textAlign: 'center', marginBottom: 20 },
+  retryBtn: { backgroundColor: '#f59e0b', paddingHorizontal: 30, paddingVertical: 12, borderRadius: 8, marginTop: 10 },
+  backBtn: { backgroundColor: '#6b7280' },
+  retryText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
+
+  categoryTitle: { fontSize: 28, fontWeight: 'bold', color: '#60a5fa', marginBottom: 25 },
+  rulesBox: { backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 16, padding: 20, width: '100%', marginBottom: 25 },
+  rulesTitle: { fontSize: 20, fontWeight: 'bold', color: 'white', marginBottom: 15, textAlign: 'center' },
+  ruleText: { color: 'white', fontSize: 16, marginBottom: 10 },
+  green: { color: '#22c55e', fontWeight: 'bold' },
+  red: { color: '#ef4444', fontWeight: 'bold' },
+  startBtn: { backgroundColor: '#22c55e', paddingHorizontal: 40, paddingVertical: 16, borderRadius: 12 },
+  startBtnText: { color: 'white', fontSize: 20, fontWeight: 'bold' },
+
+  scroll: { flex: 1 },
+  scrollContent: { padding: 20, paddingBottom: 40 },
+  
+  statsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  statsLabel: { color: '#9ca3af', fontSize: 14 },
+  statsValue: { color: '#22c55e', fontSize: 26, fontWeight: 'bold' },
+  bonus: { color: '#f59e0b', fontSize: 14 },
+  
+  timerCircle: { width: 75, height: 75, borderRadius: 40, backgroundColor: '#1e3a5f', justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: '#3b82f6' },
+  timerWarning: { backgroundColor: '#dc2626', borderColor: '#ef4444' },
+  timerNum: { color: 'white', fontSize: 26, fontWeight: 'bold' },
+  timerNumWarn: { color: '#fef08a' },
+  timerSec: { color: 'rgba(255,255,255,0.7)', fontSize: 11 },
+
+  progressBar: { height: 5, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 3, marginBottom: 8 },
+  progressFill: { height: '100%', backgroundColor: '#22c55e', borderRadius: 3 },
+  progressText: { color: '#9ca3af', fontSize: 14, marginBottom: 12 },
+
+  streakBadge: { backgroundColor: '#f59e0b', alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 15, marginBottom: 12 },
+  streakText: { color: 'white', fontSize: 14, fontWeight: 'bold' },
+
+  questionBox: { backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 14, padding: 18, marginBottom: 20 },
+  questionText: { color: 'white', fontSize: 19, fontWeight: '600', lineHeight: 28 },
+
+  optionBtn: { backgroundColor: '#1e3a5f', borderRadius: 12, padding: 16, marginBottom: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 2, borderColor: 'transparent' },
+  optionSelected: { borderColor: '#3b82f6', backgroundColor: '#2563eb' },
+  optionCorrect: { borderColor: '#22c55e', backgroundColor: '#166534' },
+  optionWrong: { borderColor: '#ef4444', backgroundColor: '#991b1b' },
+  optionLetter: { width: 30, height: 30, borderRadius: 15, backgroundColor: 'rgba(255,255,255,0.2)', color: 'white', textAlign: 'center', lineHeight: 30, fontWeight: 'bold', marginRight: 12 },
+  optionText: { color: 'white', fontSize: 16, flex: 1 },
+  resultIcon: { fontSize: 22, marginLeft: 8 },
+
+  actionBtn: { backgroundColor: '#f59e0b', paddingVertical: 16, borderRadius: 12, alignItems: 'center', marginTop: 15 },
+  nextBtn: { backgroundColor: '#22c55e' },
+  actionBtnText: { color: 'white', fontSize: 18, fontWeight: 'bold' },
+
+  toastWrapper: {
+    position: 'absolute',
+    top: 95,
+    left: 20,
+    right: 20,
     alignItems: 'center',
-    marginHorizontal: 5,
-    marginTop: 30,
+    zIndex: 100,
   },
-  backArrow: { fontSize: 24, color: 'orange' },
-  headerText: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginLeft: 10,
+  toast: {
+    paddingHorizontal: 22,
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 10,
   },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingText: { marginTop: 10, color: 'white', fontWeight: 'bold' },
-  startContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 16,
-  },
-  noteText: { color: 'white', fontSize: 22, textAlign: 'center' },
-  instructionText: {
-    color: 'white',
-    fontSize: 18,
-    textAlign: 'center',
-    lineHeight: 28,
-  },
-  highlightText: { color: '#60a5fa', fontWeight: 'bold' },
-  timeText: { color: '#9ee86f' },
-  startButton: {
-    marginTop: 20,
-    backgroundColor: 'green',
-    padding: 10,
-    borderRadius: 5,
-  },
-  startButtonText: { color: 'white', fontSize: 16 },
-  scrollContent: { paddingBottom: 50 },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  statsText: { color: 'white', fontSize: 16 },
-  timeContainer: { backgroundColor: '#1e3a8a', padding: 10, borderRadius: 50 },
-  timerText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
-  questionContainer: { padding: 20 },
-  questionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  questionText: { color: 'white', fontSize: 16 },
-  categoryText: { color: '#9ee86f', fontSize: 17 },
-  questionTitle: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 20,
-  },
-  optionButton: {
-    backgroundColor: '#1e3a8a',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 10,
-  },
-  selectedOption: { backgroundColor: '#3b82f6' },
-  correctOption: { backgroundColor: '#22c55e' },
-  wrongOption: { backgroundColor: '#ef4444' },
-  optionText: { color: 'white', fontSize: 16 },
-  submitButtonContainer: { marginTop: 20, alignItems: 'center' },
-  submitButton: { backgroundColor: '#f59e0b', padding: 15, borderRadius: 10 },
-  submitText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
-  popupContainer: {
-    marginTop: 20,
-    backgroundColor: 'white',
-    padding: 15,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  popupText: { fontSize: 18, color: 'black', fontWeight: 'bold' },
-  popupHighlightGreen: { fontWeight: '900', color: 'green' },
-  popupHighlightRed: { fontWeight: '900', color: 'red' },
-  errorText: { color: 'red', fontSize: 16, textAlign: 'center', marginTop: 20 },
-  noQuestionsText: {
-    color: 'white',
-    fontSize: 16,
-    textAlign: 'center',
-    marginTop: 20,
-  },
+  toastGreen: { backgroundColor: '#0f2e1d', borderColor: '#22c55e' },
+  toastRed: { backgroundColor: '#3a1414', borderColor: '#ef4444' },
+  toastOrange: { backgroundColor: '#3a2408', borderColor: '#f59e0b' },
+  toastText: { fontSize: 20, fontWeight: '800', textAlign: 'center' },
+  toastTextGreen: { color: '#22c55e' },
+  toastTextRed: { color: '#ef4444' },
+  toastTextOrange: { color: '#f59e0b' },
 });
 
 export default QuestionScreen;
-
-// Sign-up function
-const signUp = async (username, email, password) => {
-  try {
-    const userQuery = query(
-      collection(db, 'users'),
-      where('username', '==', username)
-    );
-    const querySnapshot = await getDocs(userQuery);
-
-    if (!querySnapshot.empty) {
-      throw new Error('auth/username-already-in-use'); // Custom error
-    }
-
-    const userCredential = await createUserWithEmailAndPassword(
-      auth,
-      email,
-      password
-    );
-
-    await setDoc(doc(db, 'users', email), {
-      username,
-      email,
-      createdAt: new Date().toISOString(),
-    });
-  } catch (error) {
-    throw error; // Re-throw Firebase error for handling in handleSignUp
-  }
-};
-
-// Sign-in function
-
-const signIn = async (email, password) => {
-  try {
-    const userCredential = await signInWithEmailAndPassword(
-      auth,
-      email,
-      password
-    );
-
-    // Fetch user data from Firestore using email
-    const userDocRef = doc(db, 'users', email);
-    const userDoc = await getDoc(userDocRef);
-
-    if (!userDoc.exists()) {
-      throw { code: 'auth/invalid-credential' }; // Throwing a custom error for user not found
-    }
-
-    const userData = userDoc.data();
-    console.log('User data:', userData);
-
-    // Store username in state (assuming setUsername is defined)
-    setUsername(userData.username || 'Unknown');
-  } catch (error) {
-    console.error('Error signing in:', error);
-    throw error; // Re-throw the error for the calling function to handle
-  }
-};
-
-// sign out function
-const logOut = async () => {
-  try {
-    await signOut(auth);
-    console.log('User logged out');
-  } catch (error) {
-    console.error('Error logging out:', error);
-  }
-};
-
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    console.log('User is logged in:', user);
-    // User is signed in, you can access user info like user.uid, user.email, etc.
-  } else {
-    // console.log('No user is logged in');
-  }
-});
-
-useEffect(() => {
-  const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-    if (currentUser) {
-      try {
-        // Retrieve user document from Firestore based on email
-        const userDocRef = doc(db, 'users', currentUser.email);
-        const userDoc = await getDoc(userDocRef);
-
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          // Set the complete user data to the state, including username
-          setUser({
-            ...currentUser,
-            ...userData,
-          });
-        } else {
-          // Set only the current user data if Firestore data does not exist
-          setUser(currentUser);
-        }
-
-        setIsLoggedIn(true);
-      } catch (error) {
-        console.error('Error fetching user data:', error);
-      }
-    } else {
-      // If user is logged out, reset user state
-      setUser(null);
-      setIsLoggedIn(false);
-    }
-  });
-
-  return () => {
-    unsubscribe();
-    console.log('Cleaned up auth listener');
-  };
-}, [auth, db]); // Ensure auth and db are dependencies
-
-// const styles = StyleSheet.create({
-//   headerText: {
-//     color: '#9ee86f',
-//     fontSize: 24,
-//     fontWeight: 'bold',
-//     textAlign: 'center',
-//     marginLeft: 50,
-//     color: 'white',
-//   },
-//   scoreContainer: {
-//     marginTop: 10,
-//     padding: 16,
-//   },
-//   scoreLabel: {
-//     color: '#9ee86f',
-//     fontWeight: 'bold',
-//     fontSize: 18,
-//   },
-//   scoreValue: {
-//     color: 'green',
-//     fontWeight: '900',
-//     fontSize: 18,
-//   },
-//   levelLabel: {
-//     color: '#cccccc',
-//     fontWeight: 'bold',
-//     fontSize: 16,
-//   },
-//   levelValue: {
-//     color: 'white',
-//     fontWeight: 'bold',
-//     fontSize: 16,
-//   },
-//   questionContainer: {
-//     marginVertical: 10,
-//     paddingHorizontal: 16,
-//   },
-//   questionText: {
-//     textAlign: 'center',
-//     marginVertical: 10,
-//     color: '#ccc',
-//     fontWeight: 'bold',
-//     fontSize: 14,
-//   },
-//   questionTitle: {
-//     color: 'orange',
-//     textAlign: 'center',
-//     fontSize: 20,
-//     marginVertical: 6,
-//   },
-//   optionButton: {
-//     borderWidth: 1,
-//     padding: 10,
-//     width: '100%',
-//     marginVertical: 8,
-//     borderRadius: 5,
-//     borderColor: '#ccc',
-//   },
-//   selectedOption: {
-//     backgroundColor: '#9ee8',
-//   },
-//   optionText: {
-//     color: 'white',
-//     fontWeight: '700',
-//     textTransform: 'uppercase',
-//     paddingLeft: 10,
-//     fontSize: 17,
-//   },
-//   submitButtonContainer: {
-//     justifyContent: 'center',
-//     alignItems: 'center',
-//     width: '100%',
-//     paddingTop: 10, // Ensure the container has full width
-//   },
-//   submitButton: {
-//     width: '80%', // You can also try a percentage width for responsiveness
-//     backgroundColor: 'blue', // Correct the background color
-//     padding: 10, // Increase padding for a larger button
-//     justifyContent: 'center',
-//     alignItems: 'center',
-//     borderRadius: 5,
-//   },
-//   submitButtonText: {
-//     color: 'white',
-//     fontWeight: 'bold',
-//   },
-//   submitText: {
-//     color: '#fff',
-//     fontWeight: 'bold',
-//     fontSize: 17,
-//   },
-//   popupContainer: {
-//     position: 'absolute',
-//     top: '0%',
-//     left: '10%',
-//     right: '10%',
-//     backgroundColor: 'white',
-//     padding: 16,
-//     borderRadius: 10,
-//     alignItems: 'center',
-//     justifyContent: 'center',
-//     //
-//     height: 100,
-//   },
-//   popupText: {
-//     color: '#000',
-//     fontSize: 18,
-//     fontWeight: 'bold',
-//   },
-//   statsContainer: {
-//     marginTop: 10,
-//     padding: 16,
-//     alignItems: 'center',
-//     justifyContent: 'space-between',
-//     flexDirection: 'row',
-//   },
-//   statsText: {
-//     color: '#9ee86f',
-//     fontSize: 18,
-//     textAlign: 'start',
-//     marginTop: 10,
-//   },
-//   timerText: {
-//     fontSize: 22,
-//     fontWeight: '900',
-//     color: 'red',
-//   },
-//   timeContainer: {
-//     borderRadius: 50,
-//     backgroundColor: 'white',
-//     padding: 10,
-//     marginRight: 20,
-//     height: 100,
-//     width: 100,
-//     justifyContent: 'center',
-//     alignItems: 'center',
-//   },
-//   //  selectedOption: {
-//   // backgroundColor: '#d3d3d3',  // Highlight for selected option
-//   correctOption: {
-//     backgroundColor: 'green', // Correct answer background after submission
-//   },
-//   wrongOption: {
-//     backgroundColor: 'red', // Wrong answer background after submission
-//   },
-// });

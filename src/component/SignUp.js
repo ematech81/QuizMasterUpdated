@@ -1,7 +1,6 @@
 import React, { useState, useContext } from 'react';
-import { QuizContext } from '../bibleContext/QuizContext';
+import { QuizContext } from '../Context/QuizContext';
 import {
-  Alert,
   KeyboardAvoidingView,
   Linking,
   Platform,
@@ -12,179 +11,103 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { ActivityIndicator } from 'react-native';
-import CheckBox from '@react-native-community/checkbox';
-
-
-
+import Checkbox from '../customs/Checkbox';
 
 function SignUp() {
-
-
   const navigation = useNavigation();
-  // State to store error messages
+
+  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+
   const [emailError, setEmailError] = useState('');
   const [usernameError, setUsernameError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
-  const [firebaseError, setFirebaseError] = useState('');
-  const [firebaseVissible, setFirebaseVissible] = useState(true);
+  const [formError, setFormError] = useState('');
+  const [privacyError, setPrivacyError] = useState('');
 
   const [loading, setLoading] = useState(false);
-   const [isChecked, setIsChecked] = useState(false);
-   const [privacyError, setPrivacyError] = useState(false);
+  const [isChecked, setIsChecked] = useState(false);
 
-  const {
-    signUp,
-    email,
-    setEmail,
-    password,
-    setPassword,
-    username,
-    setUsername,
-    confirmPassword,
-    setConfirmPassword
-  } = useContext(QuizContext);
+  const { signUp } = useContext(QuizContext);
 
-
-  const handleCheckBoxChange = () => {
-    setIsChecked(!isChecked);
+  const openPrivacyPolicy = () => {
+    Linking.openURL('https://ematech81.github.io/privacyPolicy/#privacy-policy');
   };
 
-    const openPrivacyPolicy = () => {
-      Linking.openURL(
-        'https://ematech81.github.io/privacyPolicy/#privacy-policy'
-      );
-    };
+  const openTermsAndConditions = () => {
+    Linking.openURL('https://ematech81.github.io/privacyPolicy/#terms-and-conditions');
+  };
 
-    const openTermsAndConditions = () => {
-      Linking.openURL(
-        'https://ematech81.github.io/privacyPolicy/#terms-and-conditions'
-      );
-    };
+  const handleSignUp = async () => {
+    setEmailError('');
+    setUsernameError('');
+    setPasswordError('');
+    setConfirmPasswordError('');
+    setFormError('');
+    setPrivacyError('');
 
-const handleSignUp = async () => {
-  if (isChecked) {
-  setEmailError('');
-  setUsernameError('');
-  setPasswordError('');
-  setConfirmPasswordError('');
-  setFirebaseError('');
-
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  let hasError = false;
-
-  if (!emailRegex.test(email)) {
-    setEmailError('Please enter a valid email address');
-    hasError = true;
-  } else if (email.trim() === '') {
-    setEmailError('Email field cannot be empty');
-    hasError = true;
-  }
-
-  if (username.trim() === '') {
-    setUsernameError('Please enter a username');
-    hasError = true;
-  }
-
-  if (password.length < 6) {
-    setPasswordError('Password length cannot be less than 6 characters');
-    hasError = true;
-  }
-
-  if (confirmPassword !== password) {
-    setConfirmPasswordError('Passwords do not match');
-    hasError = true;
-  }
-
-  if (hasError) return;
-
-  try {
-    setLoading(true);
-    await signUp(username, email, password);
-    navigation.navigate('MainApp');
-  } catch (error) {
-    if (error.code === 'auth/email-already-in-use') {
-      setFirebaseError(
-        'This email is already registered. Please log in instead.'
-      );
-    } else if (error.code === 'auth/invalid-email') {
-      setFirebaseError('Invalid email address. Please enter a valid email.');
-    } else if (error.message === 'auth/username-already-in-use') {
-      setFirebaseError('Username is already taken.');
-    } else {
-      setFirebaseError('An error occurred during sign-up. Please try again.');
+    if (!isChecked) {
+      setPrivacyError('Please agree to the Privacy Policy and Terms and Conditions.');
+      return;
     }
-    console.error('Sign-up error:', error);
-  } finally {
-    setLoading(false);
-  }
-  } else {
-    setPrivacyError(
-      'Please agree to the Privacy Policy and Terms and Conditions.'
-    );
-  }
-  
-};
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    let hasError = false;
 
+    if (!emailRegex.test(email)) {
+      setEmailError('Please enter a valid email address');
+      hasError = true;
+    }
 
+    if (username.trim().length < 3) {
+      setUsernameError('Username must be at least 3 characters');
+      hasError = true;
+    }
+
+    if (password.length < 6) {
+      setPasswordError('Password length cannot be less than 6 characters');
+      hasError = true;
+    }
+
+    if (confirmPassword !== password) {
+      setConfirmPasswordError('Passwords do not match');
+      hasError = true;
+    }
+
+    if (hasError) return;
+
+    try {
+      setLoading(true);
+      await signUp(username.trim(), email.trim(), password);
+      // Root navigator switches to the main app automatically once
+      // the context's `user` becomes non-null - no manual navigate needed.
+    } catch (error) {
+      setFormError(error.message || 'An error occurred during sign-up. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <ScrollView
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={{ paddingBottom: 50 }}
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        {firebaseError && (
-          <View style={styles.fireBaseError}>
-            <Text
-              style={{
-                color: 'red',
-                fontWeight: '600',
-                fontSize: 16,
-                textAlign: 'center',
-                marginBottom: 10,
-              }}
-            >
-              {firebaseError}
-            </Text>
-
-            <TouchableOpacity
-              onPress={() => navigation.navigate('SignInScreen')}
-            >
-              <Text
-                style={{
-                  marginVertical: 20,
-                  color: 'blue',
-                  fontWeight: 'bold',
-                }}
-              >
-                Login Here
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => navigation.goBack()}>
-              <Text
-                style={{
-                  marginVertical: 20,
-                  color: 'blue',
-                  fontWeight: 'bold',
-                }}
-              >
-                close
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View style={{ padding: 16, marginTop: 40 }}>
           <Text style={styles.signUp}>Welcome</Text>
 
           <View style={styles.formWrapper}>
             <Text style={styles.signUp}>Sign Up</Text>
+
+            {formError ? <Text style={styles.formErrorText}>{formError}</Text> : null}
+
             <View style={{ width: '90%', margin: 'auto', marginVertical: 20 }}>
               <Text style={styles.label}>Email:</Text>
               <TextInput
@@ -192,15 +115,12 @@ const handleSignUp = async () => {
                 value={email}
                 onChangeText={(text) => setEmail(text.trim())}
                 style={styles.input}
-                autoCapitalize="none" // Prevents accidental capitalization on mobile
-                keyboardType="email-address" // Suggests email keyboard on mobile
+                autoCapitalize="none"
+                keyboardType="email-address"
               />
-              {emailError && (
-                <Text style={{ color: 'red', fontWeight: '600', fontSize: 14 }}>
-                  {emailError}
-                </Text>
-              )}
+              {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
             </View>
+
             <View style={{ width: '90%', margin: 'auto', marginVertical: 20 }}>
               <Text style={styles.label}>Username:</Text>
               <TextInput
@@ -208,47 +128,41 @@ const handleSignUp = async () => {
                 value={username}
                 onChangeText={setUsername}
                 style={styles.input}
+                autoCapitalize="none"
               />
-              {usernameError && (
-                <Text style={{ color: 'red', fontWeight: '600', fontSize: 14 }}>
-                  {usernameError}
-                </Text>
-              )}
+              {usernameError ? <Text style={styles.errorText}>{usernameError}</Text> : null}
             </View>
+
             <View style={{ width: '90%', margin: 'auto', marginVertical: 15 }}>
               <Text style={styles.label}>Password:</Text>
               <TextInput
                 placeholder="Password"
                 value={password}
-                onChangeText={(text) => setPassword(text.trim())}
+                onChangeText={setPassword}
                 secureTextEntry
                 style={styles.input}
               />
-              {passwordError && (
-                <Text style={{ color: 'red', fontWeight: '600', fontSize: 14 }}>
-                  {passwordError}
-                </Text>
-              )}
+              {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
             </View>
+
             <View style={{ width: '90%', margin: 'auto', marginVertical: 15 }}>
               <Text style={styles.label}> Confirm Password:</Text>
               <TextInput
                 placeholder="Confirm Password"
                 value={confirmPassword}
-                onChangeText={(text) => setConfirmPassword(text.trim())}
+                onChangeText={setConfirmPassword}
                 secureTextEntry
                 style={styles.input}
               />
-              {confirmPasswordError && (
-                <Text style={{ color: 'red', fontWeight: '600', fontSize: 14 }}>
-                  {confirmPasswordError}
-                </Text>
-              )}
+              {confirmPasswordError ? (
+                <Text style={styles.errorText}>{confirmPasswordError}</Text>
+              ) : null}
             </View>
+
             <View style={styles.checkboxContainer}>
-             
+              <Checkbox value={isChecked} onValueChange={setIsChecked} />
               <Text style={styles.labelPrivacy}>
-                 By clicking the sign up button, You agree to our{' '}
+                By clicking the sign up button, You agree to our{' '}
                 <Text style={styles.link} onPress={openPrivacyPolicy}>
                   Privacy Policy
                 </Text>{' '}
@@ -259,25 +173,25 @@ const handleSignUp = async () => {
                 .
               </Text>
             </View>
+            {privacyError ? <Text style={styles.errorText}>{privacyError}</Text> : null}
 
-            <TouchableOpacity style={styles.submit} onPress={handleSignUp}>
-              <Text
-                style={{ fontWeight: 'bold', fontSize: 18, color: 'white' }}
-              >
-                Sign Up
-              </Text>
+            <TouchableOpacity
+              style={[styles.submit, loading && { opacity: 0.6 }]}
+              onPress={handleSignUp}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={{ fontWeight: 'bold', fontSize: 18, color: 'white' }}>Sign Up</Text>
+              )}
             </TouchableOpacity>
-           
 
             <View style={styles.prompt}>
               <Text style={styles.promptText1}>Already have an account?</Text>
-              {loading ? (
-                <ActivityIndicator size="large" color="#0000ff" />
-              ) : (
-                <Pressable onPress={() => navigation.navigate('SignInScreen')}>
-                  <Text style={styles.promptText}>Sign In here</Text>
-                </Pressable>
-              )}
+              <Pressable onPress={() => navigation.navigate('SignInScreen')}>
+                <Text style={styles.promptText}>Sign In here</Text>
+              </Pressable>
             </View>
           </View>
         </View>
@@ -288,26 +202,13 @@ const handleSignUp = async () => {
 
 export default SignUp;
 
-
-
-
 const styles = StyleSheet.create({
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#0d2331',
-    textAlign: 'center',
-    marginVertical: 20,
-  },
   signUp: {
-    
-
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 20,
     fontSize: 20,
   },
- 
   input: {
     height: 50,
     borderWidth: 1,
@@ -322,10 +223,10 @@ const styles = StyleSheet.create({
     color: '#525252',
   },
   submit: {
-   height:50,
-   width: "90%",
+    height: 50,
+    width: '90%',
     padding: 6,
-    marginVertical: '15',
+    marginVertical: 15,
     backgroundColor: '#60a5fa',
     alignSelf: 'center',
     justifyContent: 'center',
@@ -333,9 +234,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   formWrapper: {
-    
-    
-    // padding: 20,
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -355,8 +253,8 @@ const styles = StyleSheet.create({
   },
   promptText: {
     color: 'blue',
-    textDecorationLine: 'black',
     fontWeight: 'bold',
+    marginLeft: 5,
   },
   promptText1: {
     fontWeight: 'bold',
@@ -364,35 +262,29 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: 'red',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  formErrorText: {
+    color: 'red',
+    fontWeight: '600',
+    fontSize: 15,
     textAlign: 'center',
     marginBottom: 10,
-  },
-  fireBaseError: {
-    width: '90%',
-    height: 200,
-    backgroundColor: '#FFF',
-    elevation: 10,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-    position: 'absolute',
-    top: '20%',
-    left: '5%',
-    right: '10%',
-    zIndex: 10,
-    margin: 'auto',
+    paddingHorizontal: 16,
   },
   checkboxContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-    padding: 10,
+    marginBottom: 10,
+    paddingHorizontal: 16,
+    width: '90%',
+    alignSelf: 'center',
   },
   labelPrivacy: {
     marginLeft: 10,
     color: '#34495e',
+    flexShrink: 1,
   },
   link: {
     color: 'blue',

@@ -1,97 +1,126 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, Button, Alert, StyleSheet } from 'react-native';
-import RNPickerSelect from 'react-native-picker-select'; // Import the Picker
+import React, { useContext, useState } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  Alert,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+} from 'react-native';
+import { QuizContext } from '../Context/QuizContext';
+import { requestWithdrawal } from '../api/withdrawals';
 
+const BANKS = ['First Bank', 'Access Bank', 'GTBank', 'Zenith Bank', 'UBA'];
 
-const BankTransferForm = () => {
+const BankTransferForm = ({ onSuccess }) => {
+  const { stats, refreshWallet } = useContext(QuizContext);
+
   const [bankName, setBankName] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
   const [accountName, setAccountName] = useState('');
-  const [withdrawAmount, setWithdrawAmount] = useState(84700);
+  const [amount, setAmount] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const available = stats.totalEarnings;
 
+  const handleSubmit = async () => {
+    const numericAmount = parseFloat(amount);
 
-  const banks = [
-    { label: 'First Bank of Nigeria', value: 'First Bank' },
-    { label: 'Access Bank', value: 'Access Bank' },
-    { label: 'GTBank', value: 'GTBank' },
-    { label: 'Zenith Bank', value: 'Zenith Bank' },
-    { label: 'UBA', value: 'UBA' },
-    // Add more banks as needed
-  ]
-
-  
- const handleSubmit = () => {
-    if (!bankName || !accountNumber || !accountName || !withdrawAmount) {
-      Alert.alert('Error', 'Please fill in all fields');
+    if (!bankName || !accountNumber || !accountName || !amount) {
+      Alert.alert('Missing information', 'Please fill in all fields.');
       return;
     }
 
-    // Validation: Account number should be numeric and exactly 10 digits
-    if (accountNumber.length !== 10 || isNaN(accountNumber)) {
-      Alert.alert('Error', 'Account Number must be a valid 10-digit number');
+    if (!/^\d{10}$/.test(accountNumber)) {
+      Alert.alert('Invalid account number', 'Account number must be exactly 10 digits.');
       return;
     }
 
-    // Show a confirmation dialog
+    if (Number.isNaN(numericAmount) || numericAmount <= 0) {
+      Alert.alert('Invalid amount', 'Please enter a valid withdrawal amount.');
+      return;
+    }
+
+    if (numericAmount < 50) {
+      Alert.alert('Minimum withdrawal', 'The minimum withdrawal amount is $50.');
+      return;
+    }
+
+    if (numericAmount > available) {
+      Alert.alert(
+        'Insufficient balance',
+        `You only have $${available.toFixed(2)} available to withdraw.`
+      );
+      return;
+    }
+
     Alert.alert(
       'Confirm Withdrawal',
-      `You are about to withdraw ₦${withdrawAmount} to ${accountName} (${bankName}).`,
+      `Withdraw $${numericAmount.toFixed(2)} to ${accountName} (${bankName})?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Confirm',
-          onPress: () => {
-            console.log({
-              bankName,
-              accountNumber,
-              accountName,
-              withdrawAmount,
-            });
-            Alert.alert('Success', 'Your withdrawal request has been submitted!');
-            // Reset form fields
-            setBankName('');
-            setAccountNumber('');
-            setAccountName('');
-            setWithdrawAmount('');
+          onPress: async () => {
+            setIsSubmitting(true);
+            try {
+              await requestWithdrawal({
+                method: 'bank',
+                amount: numericAmount,
+                bankDetails: { bankName, accountNumber, accountName },
+              });
+              await refreshWallet();
+              Alert.alert(
+                'Request submitted',
+                'Your withdrawal request has been submitted and will be reviewed shortly.'
+              );
+              setBankName('');
+              setAccountNumber('');
+              setAccountName('');
+              setAmount('');
+              onSuccess?.();
+            } catch (err) {
+              Alert.alert('Could not submit request', err.message);
+            } finally {
+              setIsSubmitting(false);
+            }
           },
         },
       ]
     );
   };
 
-
-
-
-
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Nigerian Bank Transfer</Text>
+      <Text style={styles.available}>Available: ${available.toFixed(2)}</Text>
 
-      <Text style={styles.label}>Bank Name</Text>
-
-       <RNPickerSelect
-        onValueChange={(value) => setBankName(value)}
-        items={banks}
-        placeholder={{ label: 'Select your bank', value: null }}
-        style={pickerSelectStyles}
-        value={bankName}
-      />
-
-      {/* <TextInput
-        style={styles.input}
-        value={bankName}
-        onChangeText={setBankName}
-        placeholder="Enter your bank name"
-      /> */}
+      <Text style={styles.label}>Bank</Text>
+      <View style={styles.bankRow}>
+        {BANKS.map((bank) => (
+          <TouchableOpacity
+            key={bank}
+            style={[styles.bankChip, bankName === bank && styles.bankChipSelected]}
+            onPress={() => setBankName(bank)}
+          >
+            <Text
+              style={[styles.bankChipText, bankName === bank && styles.bankChipTextSelected]}
+            >
+              {bank}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
 
       <Text style={styles.label}>Account Number</Text>
       <TextInput
         style={styles.input}
         value={accountNumber}
         onChangeText={setAccountNumber}
-        placeholder="Enter your account number"
+        placeholder="10-digit account number"
         keyboardType="numeric"
+        maxLength={10}
       />
 
       <Text style={styles.label}>Account Name</Text>
@@ -102,50 +131,27 @@ const BankTransferForm = () => {
         placeholder="Enter your account name"
       />
 
-      <Text style={styles.label}>Amount to Withdraw</Text>
+      <Text style={styles.label}>Amount to Withdraw (USD)</Text>
       <TextInput
         style={styles.input}
-        value={withdrawAmount}
-        onChangeText={setWithdrawAmount}
-        placeholder="₦84,700"
+        value={amount}
+        onChangeText={setAmount}
+        placeholder={`Min $50, up to $${available.toFixed(2)}`}
         keyboardType="numeric"
-        placeholderTextColor='green'
       />
-      <Text style={{color: 'red', marginTop: -20}}>Minimum withdrawal converted to naira</Text>
-      <View style={{marginVertical: 20}}>
-           <Button title="Submit Payment Request" onPress={handleSubmit} />
-       </View>
-     
+
+      <View style={{ marginVertical: 20 }}>
+        {isSubmitting ? (
+          <ActivityIndicator size="large" color="#22c55e" />
+        ) : (
+          <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
+            <Text style={styles.submitBtnText}>Submit Withdrawal Request</Text>
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 };
-
-
-// Styles for Picker Select
-const pickerSelectStyles = StyleSheet.create({
-  inputIOS: {
-    fontSize: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    color: 'black',
-    paddingRight: 30, // to ensure the text is not obscured
-    marginBottom: 15,
-  },
-  inputAndroid: {
-    fontSize: 16,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    color: 'black',
-    paddingRight: 30, // to ensure the text is not obscured
-    marginBottom: 15,
-  },
-});
 
 const styles = StyleSheet.create({
   container: {
@@ -154,8 +160,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 20,
+    marginBottom: 4,
     textAlign: 'center',
+  },
+  available: {
+    textAlign: 'center',
+    color: '#22c55e',
+    fontWeight: 'bold',
+    marginBottom: 20,
   },
   label: {
     fontSize: 16,
@@ -167,6 +179,42 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 10,
     marginBottom: 15,
+    fontSize: 16,
+  },
+  bankRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 15,
+    gap: 8,
+  },
+  bankChip: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+  },
+  bankChipSelected: {
+    backgroundColor: '#22c55e',
+    borderColor: '#22c55e',
+  },
+  bankChipText: {
+    fontSize: 13,
+    color: '#111',
+  },
+  bankChipTextSelected: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  submitBtn: {
+    backgroundColor: '#22c55e',
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  submitBtnText: {
+    color: 'white',
+    fontWeight: 'bold',
     fontSize: 16,
   },
 });

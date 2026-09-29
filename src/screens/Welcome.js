@@ -2,36 +2,42 @@ import { View, Text, Button, StyleSheet, StatusBar } from 'react-native';
 import React, { useEffect } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-// import { StatusBar } from 'expo-status-bar';
 
 export default function Welcome({ navigation }) {
   useEffect(() => {
     const checkFirstVisit = async () => {
       const hasSeenWelcome = await AsyncStorage.getItem('hasSeenWelcome');
       if (hasSeenWelcome) {
-        navigation.replace('HomeScreen'); // Redirect to MainApp if welcome was already seen
+        navigation.replace('SignInScreen');
       }
     };
     checkFirstVisit();
   }, []);
 
   const handleGetStarted = async () => {
-    await AsyncStorage.setItem('hasSeenWelcome', 'true'); // Set flag
-    navigation.replace('HomeScreen'); // Navigate to main app
+    await AsyncStorage.setItem('hasSeenWelcome', 'true');
+    navigation.replace('SignUpScreen');
   };
 
   return (
     <View style={styles.container}>
       <LinearGradient
         colors={['#5D1A99', '#1A2D85']}
-        start={{ x: 0, y: 0 }} // Gradient starts from the top-left corner
-        end={{ x: 1, y: 1 }} // Gradient ends at the bottom-right corner
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
         style={styles.gradient}
       >
         <View style={styles.content}>
           <Text style={styles.title}>
             Welcome to <Text style={{ color: '#9ee86f' }}>QuizMaster</Text>!
           </Text>
+          {/* POINTS VERSION (disabled):
+          <Text style={styles.subtitle}>
+            Test your knowledge and earn points! From sports to science,
+            challenge yourself with questions that cover every aspect of life.
+            Answer correctly, build streaks, and climb the leaderboard!
+          </Text>
+          */}
           <Text style={styles.subtitle}>
             Test your knowledge and earn rewards! From sports to science,
             challenge yourself with questions that cover every aspect of life.
@@ -42,7 +48,6 @@ export default function Welcome({ navigation }) {
         </View>
       </LinearGradient>
 
-      {/* Disable the status bar */}
       <StatusBar barStyle="light-content" backgroundColor="#5D1A99" />
     </View>
   );

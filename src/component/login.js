@@ -1,54 +1,50 @@
 import React, { useState, useContext } from 'react';
-import { QuizContext } from '../bibleContext/QuizContext';
-import { KeyboardAvoidingView, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View , Alert, ActivityIndicator} from 'react-native';
+import { QuizContext } from '../Context/QuizContext';
+import {
+  KeyboardAvoidingView,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  ActivityIndicator,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
 function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [firebaseError, setFirebaseError] = useState('');
-
-  // https://www.youtube.com/watch?v=ZGIU5aIRi9M
+  const [formError, setFormError] = useState('');
 
   const navigation = useNavigation();
   const { signIn } = useContext(QuizContext);
 
+  const handleSignIn = async () => {
+    setFormError('');
 
-
-
-const handleSignIn = async () => {
-  setFirebaseError(''); // Clear any previous errors
-
-  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-  if (!emailPattern.test(email)) {
-    Alert.alert('Invalid Email', 'Please enter a valid email address.');
-    return;
-  }
-
-  try {
-    setLoading(true);
-    await signIn(email, password);
-    navigation.navigate('MainApp'); // Only navigate if login is successful
-  } catch (error) {
-    console.error('Login error:', error);
-
-    // Handle errors and set the appropriate message
-    if (error.code === 'auth/user-not-found') {
-      setFirebaseError('This email is not registered. Please sign up.');
-    } else if (error.code === 'auth/wrong-password') {
-      setFirebaseError('Incorrect password. Please try again.');
-    } else if (error.code === 'auth/invalid-credential') {
-      setFirebaseError('Either you enter wrong email or the email is not registered. If you have not registered, Kindly use the sign up button.');
-    } else {
-      setFirebaseError('An Error Occured. Please Try Again');
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(email)) {
+      setFormError('Please enter a valid email address.');
+      return;
     }
-  } finally {
-    setLoading(false);
-  }
-};
+    if (!password) {
+      setFormError('Please enter your password.');
+      return;
+    }
 
+    try {
+      setLoading(true);
+      await signIn(email, password);
+      // Root navigator switches to the main app automatically once
+      // the context's `user` becomes non-null - no manual navigate needed.
+    } catch (error) {
+      setFormError(error.message || 'An error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
@@ -80,18 +76,12 @@ const handleSignIn = async () => {
             />
           </View>
 
-          {/* Display Firebase error if present */}
-          {firebaseError ? (
-            <Text style={{ color: 'red', marginBottom: 10 }}>
-              {firebaseError}
-            </Text>
-          ) : null}
+          {formError ? <Text style={styles.errorText}>{formError}</Text> : null}
 
-          {/* Login Button */}
           <TouchableOpacity
             style={[styles.submitButton, loading && { opacity: 0.6 }]}
             onPress={handleSignIn}
-            disabled={loading} // Disable button during loading
+            disabled={loading}
           >
             {loading ? (
               <ActivityIndicator size="small" color="#fff" />
@@ -156,6 +146,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#525252',
     marginBottom: 5,
+  },
+  errorText: {
+    color: 'red',
+    marginBottom: 10,
+    textAlign: 'center',
+    width: '90%',
   },
   submitButton: {
     backgroundColor: '#60a5fa',

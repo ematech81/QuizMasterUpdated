@@ -3,31 +3,26 @@ import {
   Text,
   SafeAreaView,
   StatusBar,
-  Pressable,
-  Modal,
   TouchableOpacity,
 } from 'react-native';
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useCallback } from 'react';
 import { StyleSheet } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
-import EvilIcons from '@expo/vector-icons/EvilIcons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { QuizContext } from '../bibleContext/QuizContext';
-import Upload from '../component/upload';
+import { useFocusEffect } from '@react-navigation/native';
+import { QuizContext } from '../Context/QuizContext';
 import BackArrow from '../customs/backArrow';
-// import { EarningsChart } from '../component/dailyChart';
+// import { formatPoints } from '../utils/formatPoints'; // only used by the disabled points version
 
 const ActivityScreen = ({ navigation }) => {
-  const [WithdrawMessage, setWithdrawMessage] = useState(false);
-  const [isModalVissible, setIsModalVissible] = useState(false);
-  const [withdrawalErrorMessage, setWithdrawalErrorMessage] = useState('');
+  const { stats, user, refreshWallet } = useContext(QuizContext);
 
-  const {
-    // loadStoredData,
-    stats,
-    username,
-    formatTime,
-  } = useContext(QuizContext);
+  useFocusEffect(
+    useCallback(() => {
+      refreshWallet().catch(() => {});
+    }, [refreshWallet])
+  );
+
+  const canWithdraw = stats.totalEarnings >= 50;
 
   return (
     <SafeAreaView
@@ -50,42 +45,51 @@ const ActivityScreen = ({ navigation }) => {
             flexDirection: 'row',
           }}
         >
+          <BackArrow color="#0d2331" onPress={() => navigation.goBack()} />
           <Text style={styles.title}>QuizMaster</Text>
           <View style={styles.nameContainer}>
             <Text style={styles.name}>
-              {username ? username.charAt(0).toUpperCase() : 'on'}
+              {user?.username ? user.username.charAt(0).toUpperCase() : ''}
             </Text>
           </View>
         </View>
 
-        {/* earning Block */}
+        {/* POINTS VERSION (disabled):
         <View style={styles.earningBlock}>
           <View style={styles.earning}>
-            <Text style={styles.earningText}>Total Earning</Text>
-            <Text style={styles.earningAmount}>
-              ${stats.totalEarnings.toFixed(2)}
-            </Text>
+            <Text style={styles.earningText}>Total Points</Text>
+            <Text style={styles.earningAmount}>{formatPoints(stats.totalEarnings)} pts</Text>
           </View>
 
           <TouchableOpacity
             style={styles.touchable}
-            className="bg-orange-200"
-            onPress={() => {
-              if (stats.totalEarnings >= 50) {
-                navigation.navigate('PaymentScreen');
-              } else {
-                setWithdrawMessage(true);
-                const amountNeeded = 50 - stats.totalEarnings;
-                setWithdrawalErrorMessage(
-                  `Minimum withdrawal is $50. You need ${amountNeeded.toFixed(
-                    2
-                  )} more to withdraw.`
-                );
-              }
-            }}
+            onPress={() => navigation.navigate('Leaderboard')}
           >
-            <Text style={{ fontWeight: 'bold', color: 'green' }}>Withdraw</Text>
+            <Text style={{ fontWeight: 'bold', color: 'green' }}>See Ranking</Text>
           </TouchableOpacity>
+        </View>
+        */}
+        <View style={styles.earningBlock}>
+          <View style={styles.earning}>
+            <Text style={styles.earningText}>Total Earning</Text>
+            <Text style={styles.earningAmount}>${stats.totalEarnings.toFixed(2)}</Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.touchable}
+            onPress={() => navigation.navigate('PaymentScreen')}
+            disabled={!canWithdraw}
+          >
+            <Text style={{ fontWeight: 'bold', color: canWithdraw ? 'green' : '#9ca3af' }}>
+              Withdraw
+            </Text>
+          </TouchableOpacity>
+
+          {!canWithdraw && (
+            <Text style={{ color: '#fee2e2', textAlign: 'center', fontSize: 12, marginBottom: 4 }}>
+              You need ${(50 - stats.totalEarnings).toFixed(2)} more to withdraw.
+            </Text>
+          )}
 
           <Text style={{ color: 'white', textAlign: 'center' }}>
             Minimum withdrawal:
@@ -93,34 +97,8 @@ const ActivityScreen = ({ navigation }) => {
           </Text>
         </View>
 
-        {WithdrawMessage && (
-          <TouchableOpacity
-            onPress={() => setWithdrawMessage(false)}
-            style={{
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: 10,
-              backgroundColor: 'white',
-              borderRadius: 20,
-
-              zIndex: 20,
-            }}
-          >
-            <Text
-              style={{ color: 'red', fontWeight: 'bold', textAlign: 'center' }}
-            >
-              {withdrawalErrorMessage}
-            </Text>
-            <Text style={{ marginTop: 20, fontSize: 18, color: 'blue' }}>
-              Ok
-            </Text>
-          </TouchableOpacity>
-        )}
-
         <View style={styles.ActivityBlock}>
-          <Text style={{ fontSize: 20, color: '#f97316', fontWeight: 'bold' }}>
-            Activities
-          </Text>
+          <Text style={{ fontSize: 20, color: '#f97316', fontWeight: 'bold' }}>Activities</Text>
         </View>
 
         {/* activities */}
@@ -128,16 +106,11 @@ const ActivityScreen = ({ navigation }) => {
           <View style={styles.historyContent}>
             <Text style={styles.historyText}>Attempted Questions</Text>
             <Text style={styles.figures}>{stats.totalAttemptedQuestions}</Text>
-            <TouchableOpacity>
-              <Text style={styles.viewAnswer}>View Questions</Text>
-            </TouchableOpacity>
           </View>
           <View style={styles.historyContent}>
             <Text style={styles.historyText}>Correct Answers</Text>
             <Text style={styles.figures}>{stats.correctAnswers}</Text>
-            <TouchableOpacity
-              onPress={() => navigation.navigate('AnsweredQuestions')}
-            >
+            <TouchableOpacity onPress={() => navigation.navigate('AnsweredQuestions')}>
               <Text style={styles.viewAnswer}>View Answers</Text>
             </TouchableOpacity>
           </View>
@@ -147,52 +120,27 @@ const ActivityScreen = ({ navigation }) => {
           <View style={styles.historyContent}>
             <Text style={styles.historyText}>Missed Questions</Text>
             <Text style={styles.figures}>{stats.wrongAnswers}</Text>
-            <TouchableOpacity
-              onPress={() => navigation.navigate('AnsweredQuestions')}
-            >
+            <TouchableOpacity onPress={() => navigation.navigate('AnsweredQuestions')}>
               <Text style={styles.viewAnswer}>View Questions</Text>
             </TouchableOpacity>
           </View>
           <View style={styles.historyContent}>
-            <Text style={styles.historyText}>Total Time Spent</Text>
-            <Text style={styles.figures}>
-              {formatTime(stats.timeSpent.toFixed(0))}
-            </Text>
-            {/* <TouchableOpacity><Text style={styles.viewAnswer}></Text></TouchableOpacity> */}
+            <Text style={styles.historyText}>Current Streak</Text>
+            <Text style={styles.figures}>{'\u{1F525}'} {stats.consecutiveCorrect}</Text>
           </View>
         </View>
 
-        {/* daily earning */}
         <View style={styles.historyContent1}>
           <TouchableOpacity
             style={{ alignSelf: 'center' }}
-            onPress={() => setIsModalVissible(true)}
+            onPress={() => navigation.navigate('Leaderboard')}
           >
             <Text style={{ fontWeight: 'bold', color: 'white' }}>
-              Compare Your Daily Earnings
+              {'\u{1F3C6}'} See how you rank
             </Text>
           </TouchableOpacity>
         </View>
-        {/* withdraw container */}
-
-        <View>{/* <Upload /> */}</View>
-
-        {/* <View><ExternalApi/></View>  */}
       </ScrollView>
-      <View>
-        {isModalVissible && (
-          <Modal
-            onRequestClose={() => setIsModalVissible(false)}
-            presentationStyle="slide"
-            hidden
-            style={{ flex: 1 }}
-          >
-            <View>
-              <BackArrow onPress={() => setIsModalVissible(false)} />
-            </View>
-          </Modal>
-        )}
-      </View>
       <StatusBar backgroundColor="#e2e8f0" barStyle="dark-content" />
     </SafeAreaView>
   );
@@ -220,7 +168,6 @@ const styles = StyleSheet.create({
     color: '#0d2331',
     fontSize: 14,
     fontWeight: '900',
-    // paddingLeft: 16,
   },
   container: {
     padding: 16,
@@ -229,7 +176,6 @@ const styles = StyleSheet.create({
   },
   earningBlock: {
     backgroundColor: 'green',
-    // height: 150,
     elevation: 20,
     borderRadius: 10,
     marginVertical: 20,
@@ -280,7 +226,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    // borderWidth: 2,
     width: 160,
     height: 100,
     backgroundColor: '#cdd5e1',
@@ -290,10 +235,8 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    // borderWidth: 2,
     height: 50,
     backgroundColor: 'green',
-    // backgroundColor: '#bfdbfe',
     padding: 2,
     marginTop: 30,
   },
@@ -308,20 +251,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: 'bold',
     textDecorationLine: 'underline',
-  },
-  popupContainer: {
-    position: 'absolute',
-    top: '20%',
-    left: '5%',
-    right: '20%',
-    backgroundColor: '#fff',
-    padding: 1,
-    borderRadius: 10,
-    alignItems: 'center',
-    // justifyContent: 'center',
-    width: 300,
-    height: 200,
-    elevation: 50,
   },
   figures: {
     color: '#f97316',
